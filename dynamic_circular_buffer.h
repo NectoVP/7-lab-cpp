@@ -199,7 +199,7 @@ public:
     reference operator [](size_t offset) noexcept {
         return m_buffer[offset];
     }
-    reference at(size_t offset) noexcept {
+    reference at(size_t offset) {
         if (offset >= m_size)
             throw std::out_of_range("Index of out range");
         return m_buffer[offset];
@@ -254,11 +254,12 @@ public:
         }
     }
     
-    void push_back(T&& val) {
+    template <typename... Args>
+    void emplace_back(Args&&... args) {
         T temp = std::move(*m_head);
         try {
-            std::allocator_traits<Alloc>::destroy(m_allocator, m_end - 1);
-            std::allocator_traits<Alloc>::construct(m_allocator, m_head, std::forward<T>(val));
+            std::allocator_traits<Alloc>::destroy(m_allocator, m_head);
+            std::allocator_traits<Alloc>::construct(m_allocator, m_head, std::forward<Args>(args)...);
         }
         catch (...) {
             std::allocator_traits<Alloc>::destroy(m_allocator, m_head);
@@ -269,6 +270,13 @@ public:
         if (m_head == m_end)
             m_head = m_begin;
     }
+    void push_back(T&& val) {
+        emplace_back(std::move(val));
+    }
+    void push_back(const T& val) {
+        emplace_back(val);
+    }
+
     void pop_back() {
         this->erase(this->end() - 1);
     }
