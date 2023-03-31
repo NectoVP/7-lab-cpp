@@ -107,9 +107,9 @@ public:
             throw std::exception("elements consctruction fail");
         }
     }
-    circular_buffer(const circular_buffer& other) 
+    circular_buffer(const circular_buffer& other)
         : m_allocator(std::allocator_traits<Alloc>::select_on_container_copy_construction(other.m_allocator))
-        , m_buffer(m_allocator.allocate(N)) , m_begin(m_buffer) , m_end(m_buffer + N)
+        , m_buffer(m_allocator.allocate(N)), m_begin(m_buffer), m_end(m_buffer + N)
         , m_head(m_begin + (other.m_head - other.m_begin)) {
         pointer it = m_begin;
         try {
@@ -132,7 +132,7 @@ public:
         other.m_head = nullptr;
     }
     circular_buffer& operator =(const circular_buffer& other) {
-            Alloc new_allocator = std::allocator_traits<Alloc>::select_on_container_copy_construction(other.m_allocator);
+        Alloc new_allocator = std::allocator_traits<Alloc>::select_on_container_copy_construction(other.m_allocator);
         if (this != std::addressof(other)) {
             pointer new_buffer = new_allocator.allocate(N);
             pointer it = new_buffer;
@@ -191,7 +191,7 @@ public:
     reference operator [](size_t offset) noexcept {
         return m_buffer[offset];
     }
-    reference at(size_t offset) noexcept {
+    reference at(size_t offset) {
         if (offset >= N)
             throw std::out_of_range("Index of out range");
         return m_buffer[offset];
@@ -246,11 +246,13 @@ public:
                 it = this->begin();
         }
     } 
-    void push_back(T&& val) {
+
+    template <typename... Args>
+    void emplace_back(Args&&... args) {
         T temp = std::move(*m_head);
         try {
-            std::allocator_traits<Alloc>::destroy(m_allocator, m_end - 1);
-            std::allocator_traits<Alloc>::construct(m_allocator, m_head, std::forward<T>(val));
+            std::allocator_traits<Alloc>::destroy(m_allocator, m_head);
+            std::allocator_traits<Alloc>::construct(m_allocator, m_head, std::forward<Args>(args)...);
         }
         catch (...) {
             std::allocator_traits<Alloc>::destroy(m_allocator, m_head);
@@ -260,6 +262,12 @@ public:
         ++m_head;
         if (m_head == m_end)
             m_head = m_begin;
+    }
+    void push_back(T&& val) {
+        emplace_back(std::move(val));
+    }
+    void push_back(const T& val) {
+        emplace_back(val);
     }
 
     void swap(circular_buffer& other) noexcept {
